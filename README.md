@@ -1,29 +1,138 @@
 # FudanGradeGeter
 
-复旦大学成绩查询工具，用于自动化获取和处理复旦大学学生的成绩信息。
+自动化从复旦教务网站爬取成绩信息，通过 GitHub Actions 定时运行，对比成绩是否有更新，并将更新内容推送到微信或 QQ 邮箱（你可以直接在微信上接收更新，见`使用方法`一节）。相比之前寒假写的版本增加了推送的功能。
 
-## 功能特性
+## 一、简介
 
-- 自动登录复旦大学教务系统
-- 获取学期成绩信息
+这是一个个人向的成绩监控工具，核心思路是：
 
-## 安装说明
+1. 用爬虫登录教务系统，抓取最新成绩单
+2. 与上一次抓取的结果做对比，找出新增课程、成绩变动、课程被删除等差异
+3. 如果有差异，通过微信（Server酱）或 QQ 邮箱推送通知
+4. 学号、密码、推送密钥等敏感信息全部通过 GitHub Secrets 加密管理，成绩数据本身也用对称加密后再存入仓库，仓库公开也不会泄露任何明文信息
 
-1. 确保已安装Python 3.x版本
-2. 安装依赖库：
-   ```bash
-   pip install -r requirements.txt
-   ```
-   或者你自己手动把那三个模块安装，如：
-   ```bash
-   pip install requests
-   pip install beautifulsoup4
-   pip install pycryptodome
-   ```
+整个流程通过 GitHub Actions 的定时任务（`schedule`）自动运行，不需要你自己的电脑常驻在线。
 
-## 使用说明
-如果你懒得把整个仓库下下来，可以只选择copy main.py文件，安装好依赖后，在main.py文件中的最下面修改用户名和密码，运行main.py即可。
+## 二、使用方法
 
-在GradeGeter.interface 中可以选择把 `self._save()` 取消注释，保存数据为`transcript.json`与`statis.json`。
+先 Clone 本项目或者fork到你的GitHub
 
-预期按照以上的步骤使用会在终端打印你每个学期的绩点与课程门数以及总绩点与课程门数。
+
+### 准备密钥
+
+本项目所有敏感信息都通过环境变量读取，本地测试用 `.env` 文件，部署到 GitHub 后用 **Secrets**（仓库 `Settings → Secrets and variables → Actions → New repository secret`）。下面逐一说明每个密钥的含义和获取方式：
+
+| 变量名 | 含义 | 获取方式 |
+|---|---|---|
+| `STUID` | 你的11位学号本身| 应该都是11位吧（ |
+| `PASSW` | 你的UIS密码| |
+| `ENCRYPT` | 加密成绩数据用的密钥（一般为长44的字符串） | 本地运行 `encrypt.py` 里面的内容，会生成一串随机字符串并打印出来，**只生成一次**，把它存好，之后每次运行都复用这同一把密钥，不要重新生成，否则旧数据将无法解密 |
+| `QQMAIL` | 用于发送通知的 QQ 邮箱地址 | 你自己的 QQ 邮箱 |
+| `SMTPCODE` | QQ 邮箱 SMTP 服务的授权码，一般是长为16的字符串（不是 QQ 密码本身） | 登录网页版 QQ 邮箱 → 设置 → 账户与安全 → 安全设置 → 开启"POP3/IMAP/SMTP服务" → 按提示发短信验证 → 生成一个16位授权码 |
+| `TOMAIL` | 接收通知的邮箱地址（可选） | 不填则默认发给 `QQMAIL` 自己(推荐不填) |
+| `SERVER_KEY` | 微信推送（Server酱）使用的 Key（可选，与上面的QQ邮箱三个内容二选一即可，不推荐） | 访问 [Server酱官网](https://sct.ftqq.com/) 用微信扫码登录后获取，注意他这个免费版每天只能发5条（虽然可能也够用） |
+
+**关于推送方式：微信（Server酱）和 QQ 邮箱二选一即可，不需要都配置。** 个人更推荐 QQ 邮箱方案，因为它完全免费、不依赖第三方服务的额度限制，配置好 SMTP 授权码之后稳定性也更高；Server酱属于第三方转发服务，条款和免费额度可能会随时间变化，如果你更看重消息能直接弹到微信而不是邮箱 App，可以选这个，两者都配置了的话，两边都会收到通知。
+
+QQ邮箱的话，手机微信上可以开一下QQ邮箱的推送提醒，会更及时一点。方法：微信先调整为简体中文显示（如果不是的话） → 我 → 设置 → （功能）其他功能 → 辅助功能 → 启用 QQ邮箱提醒。 
+
+### 本地测试（不必要，你如果想的话可以下下来看看）
+
+在项目根目录新建 `.env` 文件（不要提交到 github上面，这里面包括你的隐私数据，`.gitignore` 已经排除了 `.env`），按上表填好所有需要的变量。
+
+i.e.
+
+```
+STUID=2xxxxxxxxxx
+PASSW=xxxxxxx
+ENCRYPT=xxxxxxxxxxxxxxxx
+QQMAIL=xxxx@qq.com
+SMTPCODE=xxxxxxxxxxxxxxxx
+TOMAIL=xxx@qq.com
+```
+
+然后运行：
+
+```bash
+# 或者直接点右上角那个绿色的“Code” 下拉 download
+git clone https://github.com/Cause-114/FudanGradeGeter.git
+cd FudanGradeGeter
+pip install -r requirements.txt
+python encrypt.py        # 第一次需要先生成 ENCRYPT 密钥，把打印出的值填进 .env
+python main.py            # 跑一次完整流程，确认能正常登录、爬取、对比、推送
+```
+
+确认本地没有报错、能收到通知的话，部署到 GitHub Actions应该也没问题。
+
+### 配置 GitHub Secrets
+
+把上表中所有变量对应填入仓库的 Secrets（`Settings → Secrets and variables → Actions`），注意变量名要跟表格里面展示的名字完全一致。注意，变量名与值 **不需要** 打引号。
+
+其中 `ENCRTPT` 需要你在本地自己运行 `encrypt.py` 文件里面的内容（见下面）生成一串44位密钥。然后将这串只有你知道的密钥填入仓库的Secrets。注意一定要用脚本进行随机生成，自己瞎写可能不太行。（其实瞎写也可以，他这个是256位2进制比特转化为43个6位比特(64)表示的字符串(`[0-9|a-z|A-Z|-|_]`,10+26+26+2=64) 然后最后填充一个'=' 字符, 这个=其实还有点说法，好像实际没有那么简单。）它的作用是来加密你的成绩数据，防止被别人看到。
+
+``` python
+from cryptography.fernet import Fernet
+
+key = Fernet.generate_key()
+print(key.decode())
+```
+
+推荐 win+R 打开cmd终端后直接进入python命令行打进去上面的三行代码。如果说少包， `pip install cryptography` 一下。
+
+### 手动触发第一次运行
+
+进入仓库的 `Actions` 标签页，左侧选择对应的 workflow，点击 `Run workflow` 按钮手动触发一次。第一次运行会建立成绩数据的基准快照（不会发送通知，因为没有"上一次"可以对比），并自动 commit 一个 `grades.enc` 文件回仓库。
+
+之后可以根据需要修改 `.github/workflows/` 下 yaml 文件里的 `cron` 表达式来调整自动检查的频率，或者继续保留 `workflow_dispatch` 随时手动触发。
+
+## 三、关于推送到微信的说明
+
+如果你选择 Server酱方案，通知会以方糖微信公众号消息的形式推送到你的微信，点开消息能看到完整的成绩单摘要和课程变动详情，不需要额外打开邮箱 App，及时性比邮件更好。
+
+如果你选择 QQ 邮箱方案，通知会以邮件形式发送，邮件正文经过特殊处理：通知栏预览只会显示一句简短提示（不会把详细成绩单摘要直接暴露在锁屏通知或下拉通知栏里），完整的课程变动详情和成绩单摘要需要点开邮件正文才能看到。强烈建议打开手机微信的QQ邮箱推送提醒。
+
+**通知内容的实际含义**：
+
+- **标题（喜/没变/悲）**：基于这次抓取后的总 GPA 和上一次相比是升高、不变还是降低，给出一个直观的情绪化提示。首次运行会显示"首次获取成绩"。
+- **课程变动详情**：列出本次检测到的所有差异，分为三类——
+  - `新课程`：上一次快照里不存在、这次新出现的课程记录（包括成绩单上新增的课，也包括之前是占位 0 分这次刚出分数的课）
+  - `成绩变动`：同一门课的绩点相比上次发生了变化
+  - `课程被删除`：上一次存在但这次成绩单里找不到的课程（一般极少出现，我以前只遇见过一次老师撤回成绩的）
+- **成绩单摘要**：按学期列出 GPA 和课程数，以及总 GPA、总课程数，方便快速了解整体情况，不需要逐条翻看课程列表。
+
+## 四、文件结构与运行流程说明
+
+### 文件作用
+
+| 文件 | 作用 |
+|---|---|
+| `login.py` | 处理复旦统一身份认证（CAS）的登录逻辑，包括 RSA 公钥加密密码、认证链请求、跳转地址解析，最终返回一个已登录的 `requests.Session` |
+| `grade.py` | 基于已登录的 session，请求教务系统成绩接口，解析并整理出按学期分类的成绩列表 `grades`，以及按学期统计的 GPA / 课程数 `stat` |
+| `encrypt.py` | 一次性脚本，用于生成 Fernet 对称加密密钥（即 `ENCRYPT` 这个 Secret 的值），只需要运行一次 |
+| `message.py` | 对比新旧成绩数据（`diff_grades`），生成本次成绩变动的标题和详细消息内容（`message` 函数） |
+| `send.py` | 负责实际的推送动作，包含 `sendwechat`（调用 Server酱接口）和 `sendemail`（通过 QQ 邮箱 SMTP 发送）两个函数 |
+| `main.py` | 主入口，串联整个流程：登录爬取 → 读取上次加密数据 → 对比差异 → 保存最新加密数据 → 按需推送通知 |
+| `requirements.txt` | 项目依赖的 Python 库列表 |
+| `.github/workflows/*.yml` | GitHub Actions 的定时任务配置，定义何时自动运行 `main.py` |
+
+### 一次运行的完整流程
+
+1. **加载环境变量**：从 `.env`（本地）或 Secrets（GitHub Actions 自动注入为环境变量）中读取学号、密码、加密密钥等。
+2. **登录教务系统**（`login.py`）：模拟浏览器请求统一身份认证流程，用 RSA 公钥加密密码后提交，完成登录拿到带 cookie 的 session。
+3. **抓取成绩**（`grade.py`）：用登录后的 session 请求成绩接口，解析出本次最新的 `grades`（详细课程列表）和 `stat`（按学期统计的 GPA 摘要）。
+4. **读取上一次的快照**（`main.py` 中 `load_old_data`）：解密仓库里已存在的 `grades.enc` 文件，得到上一次的 `old_grades` 和 `old_stat`；如果文件不存在、为空或解密失败，视为首次运行，返回 `None`。
+5. **保存本次最新数据**（`save_data`）：把这次抓到的 `grades` 和 `stat` 打包加密，覆盖写入 `grades.enc`，作为下一次对比的基准。
+6. **对比差异**（`message.py` 的 `message` 函数）：如果是首次运行，不产生任何通知；否则对比新旧成绩，生成差异列表和摘要文本。
+7. **按需推送**（`main.py`）：如果检测到有效变动，根据你配置了哪些 Secrets（`SERVER_KEY` 和/或 `QQMAIL`+`SMTPCODE`），调用 `send.py` 里对应的函数发出通知。
+8. **GitHub Actions 提交回写**：workflow 在脚本运行完毕后，把更新过的 `grades.enc` git commit 并 push 回仓库，保证下一次运行能读到这一次的最新状态。
+
+## 五、免责声明
+
+本项目仅用于个人学习和技术交流目的，主要是结合爬虫、GitHub Actions 自动化、对称加密与消息推送来解决一个实际的个人需求。
+
+- 使用本项目即代表你了解并同意：所有涉及的学号、密码、成绩等个人信息均由你自行通过 GitHub Secrets 配置和管理，**项目作者不会、也无法获取你的任何账号信息或成绩数据**，整个流程完全在你自己的 GitHub 账号和 Actions 运行环境中执行。
+- 请务必通过 GitHub Secrets 管理敏感信息，不要将密码、密钥等明文写入代码或提交到仓库；如果使用公开仓库，请务必确认 `grades.enc` 等数据文件均已加密，且加密密钥本身没有以任何形式被提交进版本历史。
+- 请遵守所在学校教务系统的使用条款，自动化抓取行为请控制合理的访问频率，避免对教务服务器造成不必要的负担。
+- 本项目不对因使用、误用或第三方未经授权访问导致的任何信息泄露、账号风险或其他后果承担责任，请使用者自行评估风险并妥善保管个人凭证。
+
+Github上还有很多类似的、更优秀的项目，比如 [https://github.com/LeafCreeper/New_Fudan_Course_Grade_Checker](https://github.com/LeafCreeper/New_Fudan_Course_Grade_Checker)  [https://github.com/wang-yaojia/Fudan-Grade-Checker](). 我这个只是自己写来玩玩的。
