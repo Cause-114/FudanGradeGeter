@@ -40,7 +40,7 @@ if __name__ == "__main__":
     save_data(f, grades, stat) # 保存新数据
     update, title, msg = message(old_grades, grades, old_stat, stat)
     if update:
-        if (skey := os.getenv("SERVER_KEY", None)) is not None:
-            sendwechat(title, msg, skey)
         if os.getenv("QQMAIL") and os.getenv("SMTPCODE"):
             sendemail(title, msg)
+        elif (skey := os.getenv("SERVER_KEY", None)) is not None:
+            sendwechat(title, msg, skey)

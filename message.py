@@ -83,11 +83,11 @@ def message(old_grades: dict, new_grades: dict, oldsummary: dict, newsummary: di
     msg="课程变动详情:\n"
     for change in changes:
         if change["mark"] == 0:
-            msg += f"新课程：{change['semester']} {change['courseName']} {change['gp']} {change['credits']}\n"
+            msg += f"新课程：{change['semester']}, {change['courseName']}。GPA: {change['gp']}, 学分：{change['credits']}\n"
         elif change["mark"] == 1:
-            msg += f"成绩变动：{change['semester']} {change['courseName']} {change['gp']} {change['credits']}\n"
+            msg += f"成绩变动：{change['semester']}, {change['courseName']}。GPA: {change['gp']}, 学分：{change['credits']}\n"
         elif change["mark"] == 2:
-            msg += f"课程被删除：{change['semester']} {change['courseName']} {change['gp']} {change['credits']}\n"
+            msg += f"课程被删除：{change['semester']}, {change['courseName']}。GPA: {change['gp']}, 学分：{change['credits']}\n"
     msg+="\n\n成绩单摘要:\n"
     for sem, stat in newsummary.items():
         msg += f"{sem} GPA: {stat['GPA']:.4f} 课程数: {stat['num']}\n"

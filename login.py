@@ -81,7 +81,7 @@ class FudanLogin:
         )
         match = re.search(r'locationValue\s*=\s*"([^"]+)"', resp.text)
         location_value = match.group(1).replace("&amp;", "&")
-        print("解析出的跳转地址:", location_value)
+        # print("解析出的跳转地址:", location_value)
 
         # step3: 跳转目标地址
         resp = self.session.get(location_value, allow_redirects=True)
