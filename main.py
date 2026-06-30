@@ -37,9 +37,9 @@ if __name__ == "__main__":
     grades, stat = bot.interface() # 获取成绩数据
     f = Fernet(os.environ["ENCRYPT"].encode()) # 获取加密器
     old_grades, old_stat = load_old_data(f) # 读取旧数据
-    save_data(f, grades, stat) # 保存新数据
     update, title, msg = message(old_grades, grades, old_stat, stat)
     if update:
+        save_data(f, grades, stat) # 保存新数据
         if os.getenv("QQMAIL") and os.getenv("SMTPCODE"):
             sendemail(title, msg)
         elif (skey := os.getenv("SERVER_KEY", None)) is not None:
