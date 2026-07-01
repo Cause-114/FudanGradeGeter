@@ -70,7 +70,7 @@ class GradeGeter:
         """打印成绩单摘要"""
         print("\n成绩单摘要:")
         for name, stat in self.statis.items():
-            print(f"{name}\tGPA:{stat["GPA"]:.4f}\t{stat["num"]}门课程")
+            print(f"{name}\tGPA:{stat['GPA']:.4f}\t{stat['num']}门课程")
 
     def _save(self):
         """保存成绩数据为JSON"""
