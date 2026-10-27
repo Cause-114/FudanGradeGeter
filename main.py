@@ -32,14 +32,17 @@ def save_data(fernet: Fernet, grades: dict, stat: dict, path: str = GRADES_FILE)
 
 
 if __name__ == "__main__":
-    dotenv.load_dotenv() # 加载环境变量
-    bot = GradeGeter(os.getenv("STUID"), os.getenv("PASSW")) # 构建 GradeGeter 实例
-    grades, stat = bot.interface() # 获取成绩数据
-    f = Fernet(os.environ["ENCRYPT"].encode()) # 获取加密器
-    old_grades, old_stat = load_old_data(f) # 读取旧数据
+    dotenv.load_dotenv()  # 加载环境变量
+    username, password = os.getenv("STUID"), os.getenv("PASSW")  # 从环境变量获取学号和密码
+    if not username or not password:
+        raise ValueError("请在 .env 文件中设置 STUID 和 PASSW 环境变量")
+    bot = GradeGeter(username, password)  # 构建 GradeGeter 实例
+    grades, stat = bot.interface()  # 获取成绩数据
+    f = Fernet(os.environ["ENCRYPT"].encode())  # 获取加密器
+    old_grades, old_stat = load_old_data(f)  # 读取旧数据
     update, title, msg = message(old_grades, grades, old_stat, stat)
     if update:
-        save_data(f, grades, stat) # 保存新数据
+        save_data(f, grades, stat)  # 保存新数据
         if os.getenv("QQMAIL") and os.getenv("SMTPCODE"):
             sendemail(title, msg)
         elif (skey := os.getenv("SERVER_KEY", None)) is not None:

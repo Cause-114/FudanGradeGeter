@@ -24,7 +24,7 @@ class GradeGeter:
             for option in semester_select.find_all("option"):
                 value = option.get("value")
                 text = option.get_text(strip=True)
-                if value and text and text != "...":
+                if isinstance(value, str) and value and text and text != "...":
                     self.semesters[int(value)] = text
 
     def _get_grade(self):

@@ -77,7 +77,7 @@ def format_markdown(content: str) -> str:
     return "\n".join(md)
 
 
-def sendemail(subject: str, content: str, to_addr: str = None):
+def sendemail(subject: str, content: str, to_addr = None):
     """
     发送邮件
     """
@@ -88,7 +88,7 @@ def sendemail(subject: str, content: str, to_addr: str = None):
     msg = MIMEMultipart("alternative")
     msg["From"] = from_addr
     msg["To"] = to_addr
-    msg["Subject"] = Header(subject, "utf-8")
+    msg["Subject"] = Header(subject, "utf-8").encode()
 
     lines = content.splitlines()
     idx = lines.index("成绩单摘要:")

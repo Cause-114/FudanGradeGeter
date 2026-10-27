@@ -1,4 +1,4 @@
-def diff_grades(old_grades: dict, new_grades: dict) -> dict:
+def diff_grades(old_grades: dict, new_grades: dict) -> list:
     """
     返回结构:
     new_courses: [{semester, courseName, gp, credits, mark}, ...]
@@ -54,7 +54,7 @@ def diff_grades(old_grades: dict, new_grades: dict) -> dict:
                 )
     return changes
 
-def good_or_bad(oldsummary: dict, newsummary: dict) -> str:
+def good_or_bad(oldsummary: dict|None, newsummary: dict) -> str:
     """
     返回值:
     "喜！": 总GPA上升
@@ -73,7 +73,9 @@ def good_or_bad(oldsummary: dict, newsummary: dict) -> str:
         return "悲！"
 
 
-def message(old_grades: dict, new_grades: dict, oldsummary: dict, newsummary: dict) -> tuple:
+
+
+def message(old_grades: dict|None, new_grades: dict, oldsummary: dict|None, newsummary: dict) -> tuple:
     """
     返回值:
     (bool, str): (是否有变动, 成绩变动消息)

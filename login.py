@@ -80,6 +80,8 @@ class FudanLogin:
             data={"loginToken": login_token},
         )
         match = re.search(r'locationValue\s*=\s*"([^"]+)"', resp.text)
+        if match is None:
+            raise ValueError("Failed to parse locationValue from authnEngine response")
         location_value = match.group(1).replace("&amp;", "&")
         # print("解析出的跳转地址:", location_value)
 
